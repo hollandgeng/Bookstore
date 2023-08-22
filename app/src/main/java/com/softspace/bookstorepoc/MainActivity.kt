@@ -2,100 +2,112 @@
 
 package com.softspace.bookstorepoc
 
-import BookstoreViews
+import android.app.Activity
 import android.os.Bundle
-import android.widget.EditText
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarColors
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MonotonicFrameClock
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.dp
-import androidx.navigation.NavHost
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
+import androidx.core.view.WindowCompat
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
 import com.softspace.bookstorepoc.ui.theme.BookstoreTheme
 import androidx.navigation.compose.rememberNavController
-import com.softspace.bookstorepoc.views.Booklist
-import com.softspace.bookstorepoc.views.LoginView
+import com.softspace.bookstorepoc.base.NavigationIntent
+import com.softspace.bookstorepoc.viewmodels.BooklistViewModel
+import com.softspace.bookstorepoc.viewmodels.LoginViewModel
+import com.softspace.bookstorepoc.viewmodels.MainViewModel
+import com.softspace.bookstorepoc.views.BookInfoScreen
+import com.softspace.bookstorepoc.views.BooklistScreen
+import com.softspace.bookstorepoc.views.LoginScreen
+import dagger.hilt.android.AndroidEntryPoint
+import helper.CustomNavHost
+import helper.CustomNavigator
+import helper.Screen
+import helper.composable
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        WindowCompat.setDecorFitsSystemWindows(window,false)
+
         setContent {
             BookstoreTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background) {
-                    BookstoreApp()
+                    MainScreen()
                 }
             }
         }
     }
 }
 
+
 @ExperimentalMaterial3Api
 @Composable
-fun BookstoreApp()
+fun MainScreen(viewModel: MainViewModel = hiltViewModel())
 {
+    val navController = rememberNavController()
+
+    NavigationEffects(navigationChannel = viewModel.navigationChannel, navHostController = navController)
+
     BookstoreTheme {
-        val navController = rememberNavController()
-        Scaffold (
-            topBar = {
-                CenterAlignedTopAppBar(
-                    colors =  TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    ),
-                    title = { Text("SS Bookstore", color = Color.Black)}
-                )},
-            content = { paddingValues ->
-                NavHost(
-                    modifier = Modifier.padding(paddingValues),
-                    navController = navController,
-                    startDestination = BookstoreViews.Login.name){
-                    composable(BookstoreViews.Login.name)
-                    {
-                        LoginView {
-                            navController.navigate(BookstoreViews.Home.name)
-                        }
-                    }
-                    composable(BookstoreViews.Home.name)
-                    {
-                        Booklist();
-                    }
-                }
+        CustomNavHost(
+            navController = navController,
+            startDestination = Screen.LoginScreen){
+            composable(Screen.LoginScreen)
+            {
+                LoginScreen()
             }
-        )
+            composable(Screen.BooklistScreen)
+            {
+                BooklistScreen()
+            }
+            composable(Screen.BookInfoScreen)
+            {
+                BookInfoScreen()
+            }
+        }
+
+//        Scaffold (
+//            topBar = {
+//                CenterAlignedTopAppBar(
+//                    colors =  TopAppBarDefaults.centerAlignedTopAppBarColors(
+//                        containerColor = MaterialTheme.colorScheme.primaryContainer
+//                    ),
+//                    title = { Text("SS Bookstore", color = Color.Black)},
+//                )},
+//            content = { paddingValues ->
+//                NavHost(
+//                    modifier = Modifier.padding(paddingValues),
+//                    navController = navController,
+//                    startDestination = BookstoreViews.Login.name){
+//                    composable(BookstoreViews.Login.name)
+//                    {
+//                        LoginView {
+//                            navController.navigate(BookstoreViews.Home.name)
+//                        }
+//                    }
+//                    composable(BookstoreViews.Home.name)
+//                    {
+//                        Booklist();
+//                    }
+//                }
+//            }
+//        )
     }
 }
 
@@ -105,6 +117,46 @@ fun BookstoreApp()
 @Composable
 fun AppPreview()
 {
-    BookstoreApp()
+    MainScreen()
 }
 
+@Composable
+fun NavigationEffects(
+    navigationChannel: Channel<NavigationIntent>,
+    navHostController: NavHostController
+)
+{
+    val activity = LocalContext.current as? Activity
+
+    LaunchedEffect(activity, navHostController, navigationChannel)
+    {
+        navigationChannel.receiveAsFlow().collect{intent ->
+            if(activity?.isFinishing == true)
+            {
+                return@collect
+            }
+
+            when(intent)
+            {
+                is NavigationIntent.NavigateBack -> {
+                    if(intent.route != null)
+                    {
+                        navHostController.popBackStack(intent.route,true)
+                    }
+                    else
+                    {
+                        navHostController.popBackStack()
+                    }
+                }
+
+                is  NavigationIntent.Navigate -> {
+                    navHostController.navigate(intent.route)
+                }
+
+                else -> {}
+            }
+        }
+
+
+    }
+}
