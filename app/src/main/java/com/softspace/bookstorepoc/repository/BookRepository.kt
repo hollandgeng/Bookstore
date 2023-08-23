@@ -19,6 +19,7 @@ import javax.inject.Singleton
 class BookRepository @Inject constructor() {
     val data = BookList_Mock
 
+
     fun GetBooks() : List<Book>
     {
         return data
@@ -32,7 +33,7 @@ class BookRepository @Inject constructor() {
         }
         else
         {
-            data.add(book)
+            data.add(0,book)
             return true
         }
     }

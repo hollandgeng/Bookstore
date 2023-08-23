@@ -38,17 +38,28 @@ import androidx.compose.material.DismissDirection
 import androidx.compose.material.FractionalThreshold
 import androidx.compose.material.IconButton
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.AlertDialog
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonColors
+import androidx.compose.material.ButtonDefaults
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,15 +68,19 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
+import coil.compose.rememberImagePainter
+import coil.request.ImageRequest
 import com.softspace.bookstorepoc.viewmodels.BooklistViewModel
 import data.Book
+import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BooklistScreen(viewModel: BooklistViewModel = hiltViewModel())
-{
+fun BooklistScreen(viewModel: BooklistViewModel = hiltViewModel()) {
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -76,84 +91,134 @@ fun BooklistScreen(viewModel: BooklistViewModel = hiltViewModel())
                 navigationIcon = {
                     TextButton(onClick = {
                         viewModel.Back()
-                    }){
-                        Text("Logout",
-                            color = Color.Red)
+                    }) {
+                        Text(
+                            "Logout",
+                            color = Color.Red
+                        )
                     }
                 },
                 actions = {
                     IconButton(onClick = {
                         viewModel.AddNewBookButton()
                     }) {
-                        Icon(imageVector = Icons.Filled.AddCircle,
-                            contentDescription = "Add New Book")
+                        Icon(
+                            imageVector = Icons.Filled.AddCircle,
+                            contentDescription = "Add New Book"
+                        )
                     }
                 }
             )
         }
     ) { paddingValues ->
-        Booklist(viewModel = viewModel,modifier = Modifier.padding(paddingValues))
+        Booklist(viewModel = viewModel, modifier = Modifier.padding(paddingValues))
     }
 }
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalFoundationApi::class)
 @ExperimentalMaterial3Api
 @Composable
-fun Booklist(viewModel: BooklistViewModel, modifier: Modifier = Modifier)
-{
-    LazyColumn (modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(5.dp)){
-        items (viewModel.GetBooks(),
+fun Booklist(viewModel: BooklistViewModel, modifier: Modifier = Modifier) {
+    LazyColumn(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        items(viewModel.GetBooks(),
             key = { book -> book.id },
             itemContent = { book ->
 
-            //val currentBook by rememberUpdatedState(book)
+                //val currentBook by rememberUpdatedState(book)
                 val context = LocalContext.current
-
-            val dismissState = rememberDismissState(
-                confirmStateChange = {
-                    if (it == DismissValue.DismissedToStart)
-                    {
-                        val removed = viewModel.RemoveBook(book)
-                        if(removed)
-                        {
-                            ShowDeleteToast(context,bookName = book.title)
+                val showDeleteAlert = remember { mutableStateOf(false) }
+                val dismissState = rememberDismissState(
+                    confirmStateChange = {
+                        if (it == DismissValue.DismissedToStart) {
+                            showDeleteAlert.value = true
                         }
-                    }
 
-                    true
+                        true
+                    }
+                )
+
+                if (showDeleteAlert.value) {
+                    val coroutineScope = rememberCoroutineScope()
+
+                    AlertDialog(
+                        onDismissRequest = {
+                            coroutineScope.launch {
+                                dismissState.reset()
+                                showDeleteAlert.value = false
+                            }
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    showDeleteAlert.value = false
+                                    val removed = viewModel.RemoveBook(book)
+                                    if (removed) {
+                                        ShowDeleteToast(context, bookName = book.title)
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red)
+                            ) {
+                                Text("Delete", color = Color.White)
+                            }
+                        },
+                        dismissButton = {
+                            Button(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        dismissState.reset()
+                                        showDeleteAlert.value = false
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(backgroundColor = Color.White)
+                            ) {
+                                Text("Cancel", color = Color.Black)
+                            }
+                        },
+                        title = { Text("Are you sure you want to delete this book?") },
+                        text = { Text("This will delete this book permanently. You cannot undo this action.") }
+                    )
                 }
-            )
 
-            SwipeToDismiss(state = dismissState,
-                directions = setOf(DismissDirection.EndToStart),
-                dismissThresholds = { FractionalThreshold(0.5F) },
-                modifier = Modifier.animateItemPlacement(),
-                background = {
-                    val bgcolor = when (dismissState.targetValue){
-                        DismissValue.DismissedToEnd  -> Color.Transparent
-                        DismissValue.DismissedToStart -> Color.Red
-                        DismissValue.Default -> Color.Transparent
-                    }
-                    Box(modifier = Modifier
-                        .fillMaxSize()
-                        .padding(4.dp)
-                        .background(bgcolor))
-                },
-                dismissContent = {
-                    bookRow(book){
-                        viewModel.ViewBook(book.id)
-                    }
-                })
+                SwipeToDismiss(state = dismissState,
+                    directions = setOf(DismissDirection.EndToStart),
+                    dismissThresholds = { FractionalThreshold(0.4F) },
+                    modifier = Modifier.animateItemPlacement(),
+                    background = {
+                        val bgcolor = when (dismissState.targetValue) {
+                            DismissValue.DismissedToEnd -> Color.Transparent
+                            DismissValue.DismissedToStart -> Color.Red
+                            DismissValue.Default -> Color.Transparent
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(4.dp)
+                                .background(Color.Transparent),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Delete,
+                                contentDescription = "Delete Item"
+                            )
+                        }
+                    },
+                    dismissContent = {
+                        bookRow(context, book) {
+                            viewModel.ViewBook(book.id)
+                        }
+                    })
 
-        })
+            })
     }
 }
 
 @Composable
-fun bookRow(book:Book, onSelect:() -> Unit)
-{
-    Row(horizontalArrangement = Arrangement.spacedBy(10. dp),
+fun bookRow(context: Context, book: Book, onSelect: () -> Unit) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
@@ -163,18 +228,23 @@ fun bookRow(book:Book, onSelect:() -> Unit)
             .padding(10.dp)
             .clickable(onClick = {
                 onSelect()
-            })) {
-        Image(imageVector = Icons.Filled.ShoppingBag,
+            })
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(context).data(book.image).crossfade(true).build(),
+            error = rememberVectorPainter(image = Icons.Filled.Book),
             contentDescription = "Book Cover",
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .height(30.dp)
                 .width(30.dp)
                 .border(0.5.dp, Color.Black, shape = CircleShape)
-                .clip(shape = CircleShape))
-        Column (horizontalAlignment = Alignment.Start, modifier = Modifier.weight(0.7F)) {
-            Text(book.title, overflow = TextOverflow.Ellipsis , maxLines = 2)
-            Text(text = book.author,
+                .clip(shape = CircleShape)
+        )
+        Column(horizontalAlignment = Alignment.Start, modifier = Modifier.weight(0.7F)) {
+            Text(book.title, overflow = TextOverflow.Ellipsis, maxLines = 2)
+            Text(
+                text = book.author,
                 color = Color.LightGray,
                 fontSize = TextUnit(10F, TextUnitType.Sp),
                 maxLines = 1,
@@ -182,11 +252,19 @@ fun bookRow(book:Book, onSelect:() -> Unit)
             )
         }
         book.creationDate?.format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
-            ?.let { Text(text = it, color = Color.LightGray, fontSize = TextUnit(10F, TextUnitType.Sp)) }
+            ?.let {
+                Text(
+                    text = it,
+                    color = Color.LightGray,
+                    fontSize = TextUnit(10F, TextUnitType.Sp)
+                )
+            }
 
-        Image(imageVector = Icons.Filled.ArrowForwardIos,
+        Image(
+            imageVector = Icons.Filled.ArrowForwardIos,
             contentDescription = "",
-            modifier = Modifier.height(10. dp))
+            modifier = Modifier.height(10.dp)
+        )
     }
 
     Divider()
@@ -195,15 +273,15 @@ fun bookRow(book:Book, onSelect:() -> Unit)
 @OptIn(ExperimentalUnitApi::class, ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
 @Composable
-fun BooklistPreview()
-{
+fun BooklistPreview() {
     //BooklistScreen()
 }
 
 
-fun ShowDeleteToast(context : Context, bookName:String)
-{
-    Toast.makeText(context,
+fun ShowDeleteToast(context: Context, bookName: String) {
+    Toast.makeText(
+        context,
         "$bookName has been deleted",
-        Toast.LENGTH_SHORT).show()
+        Toast.LENGTH_SHORT
+    ).show()
 }

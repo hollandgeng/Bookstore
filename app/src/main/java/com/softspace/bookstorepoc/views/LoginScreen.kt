@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -57,7 +58,8 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel())
     }
 
     val keyboardController = LocalSoftwareKeyboardController.current
-    
+    val context = LocalContext.current
+
     Scaffold (
         topBar = { 
             CenterAlignedTopAppBar(
@@ -100,7 +102,7 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel())
                 keyboardActions = KeyboardActions(
                     onNext = {
                         keyboardController?.hide()
-                        viewModel.Login(userId,password)
+                        viewModel.Login(context,userId,password)
                     }
                 ),
                 trailingIcon = {
@@ -116,7 +118,7 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel())
             Spacer(modifier = Modifier.height(20.dp))
 
             Button(onClick = {
-                viewModel.Login(userId,password) }) {
+                viewModel.Login(context,userId,password) }) {
                 Text(text = "Login")
             }
         }

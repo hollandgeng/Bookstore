@@ -1,7 +1,10 @@
 package com.softspace.bookstorepoc.viewmodels
 
+import android.content.Context
 import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
+import com.softspace.bookstorepoc.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import data.loginData
 import helper.CustomNavigator
@@ -14,12 +17,13 @@ import javax.inject.Named
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val navigator: CustomNavigator
+    private val navigator: CustomNavigator,
+    private val userRepo : UserRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(loginData())
     val uiState : StateFlow<loginData> = _uiState
 
-    fun Login(id:String, password:String)
+    fun Login(context: Context,id:String, password:String) : Boolean
     {
         _uiState.update { current ->
             current.copy(
@@ -28,11 +32,20 @@ class LoginViewModel @Inject constructor(
             )
         }
 
-        Log.i("DEMO",_uiState.value.userId)
-        Log.i("DEMO",_uiState.value.password)
+        val result = userRepo.ValidateUser_Mock(id,password)
 
-        navigator.navigate(Screen.BooklistScreen.fullRoute)
+        if (result)
+        {
+            navigator.navigate(Screen.BooklistScreen.fullRoute)
+        }
+        else
+        {
+            Toast.makeText(context,"Invalid UserId or Password",Toast.LENGTH_SHORT).show()
+        }
+
+        return  result
     }
+
 
 
 }

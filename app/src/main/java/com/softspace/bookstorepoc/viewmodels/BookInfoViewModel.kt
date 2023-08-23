@@ -1,7 +1,14 @@
 package com.softspace.bookstorepoc.viewmodels
 
 import android.content.Context
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.widget.Toast
+import androidx.core.app.ActivityCompat
+import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import androidx.core.content.PackageManagerCompat
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import com.softspace.bookstorepoc.repository.BookRepository
@@ -153,7 +160,8 @@ class BookInfoViewModel @Inject constructor(
             book.copy(
                 title = _tempbookDataState.value.title,
                 author = _tempbookDataState.value.author,
-                note = _tempbookDataState.value.note
+                note = _tempbookDataState.value.note,
+                image = _tempbookDataState.value.image
             )
         }
     }
@@ -187,5 +195,15 @@ class BookInfoViewModel @Inject constructor(
     private fun SetError(errorMessage : String)
     {
        _errorState.value = errorMessage
+    }
+
+
+    fun Photo(uri:Uri)
+    {
+        _tempbookDataState.update { book->
+            book.copy(
+                image = uri.toString()
+            )
+        }
     }
 }
