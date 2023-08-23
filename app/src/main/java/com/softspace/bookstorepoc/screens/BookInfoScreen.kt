@@ -1,9 +1,8 @@
-package com.softspace.bookstorepoc.views
+package com.softspace.bookstorepoc.screens
 
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import com.softspace.bookstorepoc.R
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
@@ -11,9 +10,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -29,7 +28,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.ModalBottomSheetValue
@@ -45,7 +43,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,28 +53,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.*
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.core.app.ActivityCompat
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.core.app.ComponentActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.annotation.ExperimentalCoilApi
 import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
-import coil.compose.rememberImagePainter
 import coil.request.ImageRequest
-import com.softspace.bookstorepoc.MainActivity
 import com.softspace.bookstorepoc.viewmodels.BookInfoViewModel
 import data.Book
 import data.BookEditingState
 import data.BookState
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import layouts.BottomSheetLayout
 import java.io.File
@@ -101,6 +92,8 @@ fun BookInfoScreen(
         mutableStateOf(viewModel.bookDataState.value)
     }
 
+    val focusManager = LocalFocusManager.current
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -120,6 +113,7 @@ fun BookInfoScreen(
                     TextButton(
                         enabled = !isTitleEmpty && !isAuthorEmpty,
                         onClick = {
+                            focusManager.clearFocus()
                             viewModel.TabBarActionDelegate(context, bookData)
                         }) {
                         val action = when (currentState.bookState) {
@@ -136,7 +130,14 @@ fun BookInfoScreen(
             BookState.Create -> true
             else -> false
         }
-        BookInfoView(modifier = Modifier.padding(paddingValues), bookData, editable,
+        BookInfoView(modifier = Modifier
+            .padding(paddingValues)
+            .imePadding()
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = {
+                    focusManager.clearFocus()
+                })
+            }, bookData, editable,
             onBookInfoChanged = { text, state ->
                 viewModel.UpdateBookInfo(text, state)
             },
@@ -170,7 +171,6 @@ fun BookInfoView(
     val context = LocalContext.current
     val activity = context as? ComponentActivity
 
-
     var capturedImageUri by remember {
         mutableStateOf<Uri>(Uri.EMPTY)
     }
@@ -193,13 +193,14 @@ fun BookInfoView(
                 }
             })
 
-    val galleryLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.PickVisualMedia(),
-        onResult = { uri ->
-            if (uri != null) {
-                capturedImageUri = uri
-                onPhotoTaken(uri)
-            }
-        })
+    val galleryLauncher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.PickVisualMedia(),
+            onResult = { uri ->
+                if (uri != null) {
+                    capturedImageUri = uri
+                    onPhotoTaken(uri)
+                }
+            })
 
 
     val permissionLauncher =
@@ -240,7 +241,6 @@ fun BookInfoView(
         )
 
     val scrollState = rememberScrollState()
-    val isKeyboardVisible by keyboardVisible()
 
     BackHandler {
         if (bottomModalState.isVisible)
@@ -259,12 +259,6 @@ fun BookInfoView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        LaunchedEffect(key1 = isKeyboardVisible)
-        {
-            if (isKeyboardVisible) {
-                scrollState.animateScrollTo(scrollState.maxValue)
-            }
-        }
 
         AsyncImage(
             modifier = Modifier
@@ -324,6 +318,11 @@ fun BookInfoView(
         }
     }
 
+    LaunchedEffect(scrollState.maxValue)
+    {
+        scrollState.animateScrollTo(scrollState.maxValue)
+    }
+
     BottomSheetLayout(
         btmSheetState = bottomModalState,
         onCamera = {
@@ -341,7 +340,8 @@ fun BookInfoView(
             }
         },
         onGallery = {
-            val mediaRequest = PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            val mediaRequest =
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
             galleryLauncher.launch(mediaRequest)
         })
 }

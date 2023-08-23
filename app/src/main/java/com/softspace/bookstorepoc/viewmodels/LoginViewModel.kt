@@ -1,7 +1,6 @@
 package com.softspace.bookstorepoc.viewmodels
 
 import android.content.Context
-import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import com.softspace.bookstorepoc.repository.UserRepository
@@ -13,7 +12,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import javax.inject.Inject
-import javax.inject.Named
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(

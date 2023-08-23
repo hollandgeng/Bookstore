@@ -1,14 +1,8 @@
 package com.softspace.bookstorepoc.viewmodels
 
 import android.content.Context
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
-import androidx.core.app.ActivityCompat
-import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
-import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
-import androidx.core.content.PackageManagerCompat
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import com.softspace.bookstorepoc.repository.BookRepository

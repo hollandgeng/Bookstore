@@ -14,22 +14,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.softspace.bookstorepoc.ui.theme.BookstoreTheme
 import androidx.navigation.compose.rememberNavController
-import com.softspace.bookstorepoc.base.NavigationIntent
-import com.softspace.bookstorepoc.viewmodels.BooklistViewModel
-import com.softspace.bookstorepoc.viewmodels.LoginViewModel
+import com.softspace.bookstorepoc.interfaces.NavigationIntent
 import com.softspace.bookstorepoc.viewmodels.MainViewModel
-import com.softspace.bookstorepoc.views.BookInfoScreen
-import com.softspace.bookstorepoc.views.BooklistScreen
-import com.softspace.bookstorepoc.views.LoginScreen
+import com.softspace.bookstorepoc.screens.BookInfoScreen
+import com.softspace.bookstorepoc.screens.BooklistScreen
+import com.softspace.bookstorepoc.screens.LoginScreen
 import dagger.hilt.android.AndroidEntryPoint
 import helper.CustomNavHost
-import helper.CustomNavigator
 import helper.Screen
 import helper.composable
 import kotlinx.coroutines.channels.Channel
@@ -62,7 +60,7 @@ fun MainScreen(viewModel: MainViewModel = hiltViewModel())
 {
     val navController = rememberNavController()
 
-    NavigationEffects(navigationChannel = viewModel.navigationChannel, navHostController = navController)
+    RegisterNavigationEffects(navigationChannel = viewModel.navigationChannel, navHostController = navController)
 
     BookstoreTheme {
         CustomNavHost(
@@ -81,33 +79,6 @@ fun MainScreen(viewModel: MainViewModel = hiltViewModel())
                 BookInfoScreen()
             }
         }
-
-//        Scaffold (
-//            topBar = {
-//                CenterAlignedTopAppBar(
-//                    colors =  TopAppBarDefaults.centerAlignedTopAppBarColors(
-//                        containerColor = MaterialTheme.colorScheme.primaryContainer
-//                    ),
-//                    title = { Text("SS Bookstore", color = Color.Black)},
-//                )},
-//            content = { paddingValues ->
-//                NavHost(
-//                    modifier = Modifier.padding(paddingValues),
-//                    navController = navController,
-//                    startDestination = BookstoreViews.Login.name){
-//                    composable(BookstoreViews.Login.name)
-//                    {
-//                        LoginView {
-//                            navController.navigate(BookstoreViews.Home.name)
-//                        }
-//                    }
-//                    composable(BookstoreViews.Home.name)
-//                    {
-//                        Booklist();
-//                    }
-//                }
-//            }
-//        )
     }
 }
 
@@ -121,12 +92,13 @@ fun AppPreview()
 }
 
 @Composable
-fun NavigationEffects(
+fun RegisterNavigationEffects(
     navigationChannel: Channel<NavigationIntent>,
     navHostController: NavHostController
 )
 {
     val activity = LocalContext.current as? Activity
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(activity, navHostController, navigationChannel)
     {
@@ -139,6 +111,8 @@ fun NavigationEffects(
             when(intent)
             {
                 is NavigationIntent.NavigateBack -> {
+                    focusManager?.clearFocus()
+
                     if(intent.route != null)
                     {
                         navHostController.popBackStack(intent.route,true)

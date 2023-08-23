@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import helper.CustomNavigator
 import javax.inject.Inject
-import javax.inject.Named
 
 @HiltViewModel
 class MainViewModel @Inject constructor(

@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import com.softspace.bookstorepoc.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import data.Book
-import data.BookState
 import helper.CustomNavigator
 import helper.Screen
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,15 +39,6 @@ class BooklistViewModel @Inject constructor(
         navigator.navigate(Screen.BookInfoScreen(bookId))
     }
 
-    fun AddBook(book:Book) : Boolean
-    {
-        return bookRepository.AddBook(book)
-    }
-
-    fun EditBook(book: Book) : Boolean
-    {
-        return bookRepository.UpdateBook(book)
-    }
 
     fun Back()
     {

@@ -1,7 +1,6 @@
-package com.softspace.bookstorepoc.views
+package com.softspace.bookstorepoc.screens
 
 import android.content.Context
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -20,7 +19,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForwardIos
-import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.DismissValue
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,7 +39,6 @@ import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
-import androidx.compose.material.ButtonColors
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -50,12 +47,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -69,13 +63,11 @@ import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-import coil.compose.rememberImagePainter
 import coil.request.ImageRequest
 import com.softspace.bookstorepoc.viewmodels.BooklistViewModel
 import data.Book
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
 
 
 @OptIn(ExperimentalMaterial3Api::class)

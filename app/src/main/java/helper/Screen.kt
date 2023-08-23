@@ -26,9 +26,6 @@ sealed class Screen(protected val route : String, vararg params:String)
 
     object BooklistScreen : Screen("Booklist")
 
-/**
- * @param bookId for viewing; no parameter for creating book
- * */
     object BookInfoScreen : Screen("BookInfo", "bookId")
     {
         const val BOOK_ID_KEY = "bookId"
@@ -46,8 +43,6 @@ internal fun String.pairParam(vararg params:Pair<String,Any?>) : String
 
     params.forEach {
         val para = it.second?.toString()
-
-        //if (para.isNullOrBlank()) return builder.toString()
 
         para?.let {arg->
             builder.append("/$arg")

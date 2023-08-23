@@ -1,4 +1,4 @@
-package com.softspace.bookstorepoc.base
+package com.softspace.bookstorepoc.interfaces
 
 import kotlinx.coroutines.channels.Channel
 
