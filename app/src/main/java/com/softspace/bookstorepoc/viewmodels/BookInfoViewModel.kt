@@ -2,9 +2,16 @@ package com.softspace.bookstorepoc.viewmodels
 
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import android.widget.Toast
+import androidx.annotation.RequiresApi
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.core.net.toFile
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.softspace.bookstorepoc.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import data.Book
@@ -13,57 +20,67 @@ import data.BookState
 import data.BookUiState
 import helper.CustomNavigator
 import helper.Screen
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import java.io.File
+import java.io.InputStream
 import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
 class BookInfoViewModel @Inject constructor(
     private val navigator: CustomNavigator,
-    private val bookRepo : BookRepository,
+    private val bookRepo: BookRepository,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    var book by mutableStateOf(Book("","",""))
+        private set
+
+    fun GetBookData()
+    {
+        val id = savedStateHandle.get<String>(Screen.BookInfoScreen.BOOK_ID_KEY)
+        val bookId = UUID.fromString(id)
+        viewModelScope.launch(Dispatchers.IO){
+            val result = bookRepo.GetBookById(bookId)
+            if (result == null)
+            {
+                UpdateState(BookState.Create)
+                book = Book("","","")
+            }
+            else
+            {
+                book = result
+            }
+        }
+    }
 
     private val _uiState = MutableStateFlow(BookUiState(BookState.View))
     val uiState: StateFlow<BookUiState> = _uiState
 
-    private val _bookDataState = MutableStateFlow(Book("","",""))
-    val bookDataState : StateFlow<Book> = _bookDataState
+    private val _bookDataState = MutableStateFlow(Book("", "", ""))
+    val bookDataState: StateFlow<Book> = _bookDataState
 
-    private val _tempbookDataState = MutableStateFlow(Book("","",""))
+    private val _tempbookDataState = MutableStateFlow(Book("", "", ""))
 
     private val _errorState = MutableStateFlow("")
-    val errorState : StateFlow<String> = _errorState
+    val errorState: StateFlow<String> = _errorState
 
     private val _titleEmptyState = MutableStateFlow(true)
-    val titleEmptyState:StateFlow<Boolean> = _titleEmptyState
+    val titleEmptyState: StateFlow<Boolean> = _titleEmptyState
 
     private val _authorEmptyState = MutableStateFlow(true)
-    val authorEmptyState:StateFlow<Boolean> = _authorEmptyState
+    val authorEmptyState: StateFlow<Boolean> = _authorEmptyState
 
-    init {
-        val id = savedStateHandle.get<String>(Screen.BookInfoScreen.BOOK_ID_KEY)
+    private val _canSaveState = MutableStateFlow(false)
+    val canSaveState : StateFlow<Boolean> = _canSaveState
 
-        val bookId = UUID.fromString(id)
-
-        val book = bookRepo.GetBookById(bookId)
-
-        if(book == null)
-        {
-            UpdateState(BookState.Create)
-            val newbook = Book("","","",id = bookId)
-
-            SetBook(newbook)
-            PopulateBookInfo(newbook)
-        }
-        else
-        {
-            SetBook(book)
-            PopulateBookInfo(book)
-        }
-    }
 
     fun TabBarActionDelegate(context: Context, book: Book) {
         when (_uiState.value.bookState) {
@@ -72,22 +89,21 @@ class BookInfoViewModel @Inject constructor(
             }
 
             BookState.Create -> {
-                SyncBook()
                 CreateBook(context)
             }
 
             BookState.Edit -> {
-                SyncBook()
                 SaveBook()
             }
         }
     }
 
-    private fun UpdateState(bookState: BookState)
-    {
+    private fun UpdateState(bookState: BookState) {
         _uiState.update { state ->
             state.copy(bookState)
         }
+
+        CheckCanSave()
     }
 
     private fun EnableEdit() {
@@ -95,106 +111,74 @@ class BookInfoViewModel @Inject constructor(
     }
 
     private fun CreateBook(context: Context) {
-        val bookTitle : String = _bookDataState.value.title
+        val bookTitle: String = book.title
 
-        bookRepo.AddBook(_bookDataState.value)
+        viewModelScope.launch {
+            bookRepo.AddBook(book)
+        }
 
         UpdateState(BookState.View)
 
         Toast.makeText(context, "$bookTitle Added", Toast.LENGTH_SHORT).show()
     }
 
-    private fun SetBook(book: Book) {
-        _bookDataState.value = book
-        _tempbookDataState.value = book
 
-        CheckCanSave()
-    }
-
-    fun UpdateBookInfo(content:String, editingState: BookEditingState)
-    {
-        when (editingState)
-        {
+    fun UpdateBookInfo(content: String, editingState: BookEditingState) {
+        when (editingState) {
             BookEditingState.Title -> {
-                _tempbookDataState.update { book ->
-                    book.copy(
-                        title = content
-                    )
-                }
+                book = book.copy(
+                    title = content
+                )
             }
 
-            BookEditingState.Author ->
-                _tempbookDataState.update { book ->
-                    book.copy(
-                        author = content
-                    )
-                }
+            BookEditingState.Author -> {
+                book = book.copy(
+                    author = content
+                )
+            }
 
             BookEditingState.Note -> {
-                _tempbookDataState.update { book ->
-                    book.copy(
-                        note = content
-                    )
-                }
+                book = book.copy(
+                    note = content
+                )
+            }
+
+            BookEditingState.Image -> {
+                book = book.copy(
+                    image = content
+                )
             }
         }
 
         CheckCanSave()
     }
 
-    private fun CheckCanSave()
-    {
-        _titleEmptyState.value = _tempbookDataState.value.title.isEmpty()
-        _authorEmptyState.value = _tempbookDataState.value.author.isEmpty()
+    private fun CheckCanSave() {
+        _canSaveState.value = book.title.isNotBlank() && book.author.isNotBlank()
     }
 
-    private fun SyncBook()
-    {
-        _bookDataState.update { book ->
-            book.copy(
-                title = _tempbookDataState.value.title,
-                author = _tempbookDataState.value.author,
-                note = _tempbookDataState.value.note,
-                image = _tempbookDataState.value.image
-            )
+    private fun SaveBook() {
+        viewModelScope.launch {
+            bookRepo.UpdateBook(book)
         }
-    }
-
-    private fun SaveBook()
-    {
-        val result :Boolean = bookRepo.UpdateBook(_bookDataState.value)
 
         //Then update the current uiState back to View Mode
         UpdateState(BookState.View)
     }
 
-    fun NavigateBack()
-    {
+    fun NavigateBack() {
         navigator.navigateBack()
     }
 
-    private fun PopulateBookInfo(book : Book?)
-    {
-        if (book == null)
-        {
-            SetError("Book Not Found")
-            NavigateBack()
-        }
-        else
-        {
-            _bookDataState.value = book
-        }
-    }
 
-    private fun SetError(errorMessage : String)
-    {
-       _errorState.value = errorMessage
+
+    private fun SetError(errorMessage: String) {
+        _errorState.value = errorMessage
     }
 
 
-    fun Photo(uri:Uri)
-    {
-        _tempbookDataState.update { book->
+    fun Photo(uri: Uri) {
+        _tempbookDataState.update { book ->
             book.copy(
                 image = uri.toString()
             )

@@ -10,7 +10,8 @@ enum class BookEditingState
 {
     Title,
     Author,
-    Note
+    Note,
+    Image
 }
 
 data class BookUiState(val bookState: BookState)

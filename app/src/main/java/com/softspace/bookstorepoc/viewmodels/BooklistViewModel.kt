@@ -1,13 +1,17 @@
 package com.softspace.bookstorepoc.viewmodels
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.softspace.bookstorepoc.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import data.Book
 import helper.CustomNavigator
 import helper.Screen
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 
@@ -17,16 +21,21 @@ class BooklistViewModel @Inject constructor(
     private val bookRepository: BookRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(bookRepository.GetBooks())
-    val uiState : StateFlow<List<Book>> = _uiState
 
-    fun GetBooks(): List<Book> {
-        return uiState.value
-    }
+
+    private val _bookState = bookRepository.GetBooks()
+    val bookState = _bookState.stateIn(viewModelScope, SharingStarted.WhileSubscribed(),
+        emptyList()
+    )
+
 
     fun RemoveBook(book:Book) : Boolean
     {
-        return bookRepository.RemoveBook(book)
+        viewModelScope.launch {
+            bookRepository.RemoveBook(book)
+        }
+
+        return  true
     }
 
     fun AddNewBookButton()
@@ -46,4 +55,4 @@ class BooklistViewModel @Inject constructor(
     }
 }
 
-data class Booklist(val books: MutableList<Book>)
+data class Booklist(val books: List<Book> = emptyList())

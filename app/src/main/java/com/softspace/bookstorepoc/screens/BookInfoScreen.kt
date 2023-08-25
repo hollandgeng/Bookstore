@@ -2,20 +2,24 @@ package com.softspace.bookstorepoc.screens
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
@@ -29,6 +33,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.AlertDialog
+import androidx.compose.material.Button
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.icons.filled.Book
@@ -59,9 +64,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.font.FontWeight
 import androidx.core.app.ComponentActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.core.net.toFile
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -69,13 +76,17 @@ import com.softspace.bookstorepoc.viewmodels.BookInfoViewModel
 import data.Book
 import data.BookEditingState
 import data.BookState
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import layouts.BottomSheetLayout
+import org.intellij.lang.annotations.JdkConstants.HorizontalAlignment
 import java.io.File
+import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Objects
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun BookInfoScreen(
@@ -83,13 +94,12 @@ fun BookInfoScreen(
 ) {
     val currentState = viewModel.uiState.collectAsState().value
     val error = viewModel.errorState.collectAsState().value
-    val isTitleEmpty = viewModel.titleEmptyState.collectAsState().value
-    val isAuthorEmpty = viewModel.authorEmptyState.collectAsState().value
+    val canSave = viewModel.canSaveState.collectAsState().value
     val context = LocalContext.current
 
-
-    val bookData by remember {
-        mutableStateOf(viewModel.bookDataState.value)
+    LaunchedEffect(Unit)
+    {
+        viewModel.GetBookData()
     }
 
     val focusManager = LocalFocusManager.current
@@ -111,10 +121,10 @@ fun BookInfoScreen(
                 ),
                 actions = {
                     TextButton(
-                        enabled = !isTitleEmpty && !isAuthorEmpty,
+                        enabled = currentState.bookState == BookState.View || canSave,
                         onClick = {
                             focusManager.clearFocus()
-                            viewModel.TabBarActionDelegate(context, bookData)
+                            viewModel.TabBarActionDelegate(context, viewModel.book)
                         }) {
                         val action = when (currentState.bookState) {
                             BookState.Create -> "Done"
@@ -137,12 +147,12 @@ fun BookInfoScreen(
                 detectTapGestures(onTap = {
                     focusManager.clearFocus()
                 })
-            }, bookData, editable,
+            }, viewModel.book, editable,
             onBookInfoChanged = { text, state ->
                 viewModel.UpdateBookInfo(text, state)
             },
-            onPhotoTaken = { uri ->
-                viewModel.Photo(uri)
+            onImageClick = {
+                focusManager.clearFocus()
             })
     }
 
@@ -157,6 +167,7 @@ fun ErrorToast(context: Context, message: String) {
     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
 }
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun BookInfoView(
@@ -165,11 +176,15 @@ fun BookInfoView(
     editable: Boolean = false,
     onBookInfoChanged: (text: String, editingState: BookEditingState) -> Unit,
     onImageClick: () -> Unit = {},
-    onPhotoTaken: (uri: Uri) -> Unit
+    onPhotoTaken: (uri: Uri) -> Unit = {}
 ) {
 
     val context = LocalContext.current
     val activity = context as? ComponentActivity
+
+    var showRationalPermission by remember {
+        mutableStateOf(false)
+    }
 
     var capturedImageUri by remember {
         mutableStateOf<Uri>(Uri.EMPTY)
@@ -181,10 +196,20 @@ fun BookInfoView(
         context.packageName + ".provider", file
     )
 
+    var isPermissionGranted by remember {
+        mutableStateOf(IsPermissionGranted(context))
+    }
+
+    var wasTakingPhoto by remember {
+        mutableStateOf(false)
+    }
+
     val cameraLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.TakePicture(),
             onResult = { isSuccess ->
+                wasTakingPhoto = false
+
                 if (isSuccess) {
                     capturedImageUri = uri
                     onPhotoTaken(uri)
@@ -195,10 +220,10 @@ fun BookInfoView(
 
     val galleryLauncher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.PickVisualMedia(),
-            onResult = { uri ->
-                if (uri != null) {
+            onResult = { imageUri ->
+                if (imageUri != null) {
+                    CopyImage(context,imageUri,file)
                     capturedImageUri = uri
-                    onPhotoTaken(uri)
                 }
             })
 
@@ -206,26 +231,12 @@ fun BookInfoView(
     val permissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { wasGranted ->
             if (wasGranted) {
-                // TODO do work (ie forward to viewmodel)
+                isPermissionGranted = wasGranted
+                wasTakingPhoto = true
                 Toast.makeText(context, "Camera Permission Granted", Toast.LENGTH_SHORT).show()
             }
         }
 
-    var isPermissionGranted by remember {
-        mutableStateOf(IsPermissionGranted(context))
-    }
-
-    var bookName by remember {
-        mutableStateOf(book.title)
-    }
-
-    var author by remember {
-        mutableStateOf(book.author)
-    }
-
-    var note by remember {
-        mutableStateOf(book.note)
-    }
 
     var image by remember {
         mutableStateOf(book.image)
@@ -268,21 +279,21 @@ fun BookInfoView(
                 .clickable(
                     enabled = editable,
                     onClick = {
+                        onImageClick()
                         couroutineScope.launch {
                             if (!bottomModalState.isVisible)
                                 bottomModalState.show()
                         }
                     }),
-            model = ImageRequest.Builder(context).data(image).crossfade(true).build(),
+            model = ImageRequest.Builder(context).data(book.image).crossfade(true).build(),
             error = rememberVectorPainter(image = Icons.Filled.Book),
             contentDescription = "",
             contentScale = ContentScale.Fit
         )
 
         OutlinedTextField(
-            value = bookName,
+            value = book.title,
             onValueChange = {
-                bookName = it
                 onBookInfoChanged(it, BookEditingState.Title)
             },
             prefix = { Text("Name: ") },
@@ -291,9 +302,8 @@ fun BookInfoView(
         )
 
         OutlinedTextField(
-            value = author,
+            value = book.author,
             onValueChange = {
-                author = it
                 onBookInfoChanged(it, BookEditingState.Author)
             },
             prefix = { Text("Author: ") },
@@ -302,9 +312,8 @@ fun BookInfoView(
         )
 
         OutlinedTextField(
-            value = note,
+            value = book.note,
             onValueChange = {
-                note = it
                 onBookInfoChanged(it, BookEditingState.Note)
             },
             placeholder = { Text("Add Note Here") },
@@ -313,8 +322,8 @@ fun BookInfoView(
         )
 
         if (capturedImageUri.path?.isNotEmpty() == true) {
-            image = capturedImageUri.toString()
-            Log.i("IMAGE_CAPTURED", image)
+            //image = capturedImageUri.toString()
+            onBookInfoChanged(capturedImageUri.toString(), BookEditingState.Image)
         }
     }
 
@@ -327,12 +336,11 @@ fun BookInfoView(
         btmSheetState = bottomModalState,
         onCamera = {
             if (isPermissionGranted) {
-                cameraLauncher.launch(uri)
+                wasTakingPhoto = true
             } else {
                 if (activity != null) {
                     if (activity.shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
-
-                        Log.i("DEMO", "no")
+                        showRationalPermission = true
                     } else {
                         permissionLauncher.launch(Manifest.permission.CAMERA)
                     }
@@ -344,12 +352,38 @@ fun BookInfoView(
                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
             galleryLauncher.launch(mediaRequest)
         })
+
+    if (wasTakingPhoto && isPermissionGranted) {
+        cameraLauncher.launch(uri)
+    }
+
+    if (showRationalPermission) {
+        AlertDialog(onDismissRequest = { showRationalPermission = false },
+            confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showRationalPermission = false
+                            var intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.fromParts("package", activity!!.packageName, null))
+                            activity.startActivity(intent)
+                        }) {
+                        Text("Settings")
+                    }
+            },
+            title = {
+                Text("Camera Permission Denied",
+                    fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text("To enabled camera access, you may go:\nSettings > Apps > Permission and change it")
+            })
+    }
 }
 
 @Preview
 @Composable
 fun BookInfoViewPreview() {
-    BookInfoScreen()
+    //BookInfoScreen()
 }
 
 @Composable
@@ -357,12 +391,6 @@ fun ShowBook(name: String) {
     AlertDialog(onDismissRequest = { }, confirmButton = { /*TODO*/ },
         title = { Text("Book Name") },
         text = { Text(name) })
-}
-
-@Composable
-fun keyboardVisible(): State<Boolean> {
-    val isKeyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0;
-    return rememberUpdatedState(isKeyboardVisible)
 }
 
 private fun IsPermissionGranted(context: Context): Boolean {
@@ -380,5 +408,16 @@ fun Context.createImageFile(): File {
         externalCacheDir      /* directory */
     )
     return image
+}
+
+@RequiresApi(Build.VERSION_CODES.Q)
+fun CopyImage(context:Context , origin:Uri,destination:File)
+{
+    val sourceStream: InputStream? = context.contentResolver.openInputStream(origin)
+    sourceStream?.use { inputStream ->
+        destination.outputStream().use { outputStream ->
+            inputStream.copyTo(outputStream)
+        }
+    }
 }
 

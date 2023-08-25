@@ -47,6 +47,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -111,11 +112,14 @@ fun BooklistScreen(viewModel: BooklistViewModel = hiltViewModel()) {
 @ExperimentalMaterial3Api
 @Composable
 fun Booklist(viewModel: BooklistViewModel, modifier: Modifier = Modifier) {
+
+    val bookState = viewModel.bookState.collectAsState()
+
     LazyColumn(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
-        items(viewModel.GetBooks(),
+        items(bookState.value,
             key = { book -> book.id },
             itemContent = { book ->
 

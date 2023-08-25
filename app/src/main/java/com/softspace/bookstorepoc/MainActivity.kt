@@ -21,12 +21,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.softspace.bookstorepoc.ui.theme.BookstoreTheme
 import androidx.navigation.compose.rememberNavController
+import androidx.room.Room
 import com.softspace.bookstorepoc.interfaces.NavigationIntent
 import com.softspace.bookstorepoc.viewmodels.MainViewModel
 import com.softspace.bookstorepoc.screens.BookInfoScreen
 import com.softspace.bookstorepoc.screens.BooklistScreen
 import com.softspace.bookstorepoc.screens.LoginScreen
 import dagger.hilt.android.AndroidEntryPoint
+import database.BookDB
+import database.DatabaseModule
 import helper.CustomNavHost
 import helper.Screen
 import helper.composable
@@ -35,6 +38,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

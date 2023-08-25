@@ -1,79 +1,48 @@
 package com.softspace.bookstorepoc.repository
 
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
-import com.softspace.bookstorepoc.viewmodels.BooklistViewModel
-import dagger.Component
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
-import dagger.internal.InjectedFieldSignature
 import data.Book
-import data.BookList_Mock
+import com.softspace.bookstorepoc.interfaces.IBookDAO
+import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 import javax.inject.Inject
-import javax.inject.Singleton
 
-class BookRepository @Inject constructor() {
-    val data = BookList_Mock
+class BookRepository @Inject constructor(
+    private val dbContext : IBookDAO
+) {
 
-
-    fun GetBooks() : List<Book>
+    fun GetBooks() : Flow<List<Book>>
     {
-        return data
+        return dbContext.getBooks()
     }
 
-    fun AddBook(book: Book) : Boolean
+    fun GetBookById(bookId: UUID) : Book?
     {
-        if (IsBookExist(book))
-        {
-            return false;
-        }
-        else
-        {
-            data.add(0,book)
-            return true
-        }
+        return dbContext.getBookById(bookId)
     }
 
-    fun RemoveBook(book: Book) : Boolean
+    suspend fun AddBook(book: Book)
     {
-        return data.remove(book)
+        dbContext.upsertBook(book)
+    }
+
+    suspend fun RemoveBook(book: Book)
+    {
+        return dbContext.deleteBook(book)
     }
 
     /**
     * @return true if book was successfully updated;
      * false if book not found
     */
-    fun UpdateBook(book:Book) : Boolean
+    suspend fun UpdateBook(book:Book)
     {
-        if(!IsBookExist(book)) return false
-
-        val index = BookList_Mock.indexOfFirst { it.id == book.id }
-        BookList_Mock[index] = book
-
-        return true
+        dbContext.upsertBook(book)
     }
 
-    private fun IsBookExist(book: Book) : Boolean
-    {
-        return data.any{it.id == book.id}
-    }
+//    private fun IsBookExist(book: Book) : Boolean
+//    {
+//        return data.any{it.id == book.id}
+//    }
 
-    fun GetBookById(bookId:UUID) : Book?
-    {
-        val book : Book?
 
-        try {
-            book = data.find { it.id == bookId }
-        }
-        catch (exception : Exception )
-        {
-            return null
-        }
-
-        return book
-    }
 }
