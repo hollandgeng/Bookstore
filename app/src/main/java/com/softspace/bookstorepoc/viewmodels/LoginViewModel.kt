@@ -3,6 +3,7 @@ package com.softspace.bookstorepoc.viewmodels
 import android.content.Context
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
+import com.softspace.bookstorepoc.interfaces.ICustomNavigator
 import com.softspace.bookstorepoc.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import data.loginData
@@ -15,7 +16,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val navigator: CustomNavigator,
+    private val navigator: ICustomNavigator,
     private val userRepo : UserRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(loginData())

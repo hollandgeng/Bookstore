@@ -2,6 +2,7 @@ package com.softspace.bookstorepoc.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.softspace.bookstorepoc.interfaces.ICustomNavigator
 import com.softspace.bookstorepoc.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import data.Book
@@ -17,7 +18,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class BooklistViewModel @Inject constructor(
-    private val navigator : CustomNavigator,
+    private val navigator : ICustomNavigator,
     private val bookRepository: BookRepository
 ) : ViewModel() {
 

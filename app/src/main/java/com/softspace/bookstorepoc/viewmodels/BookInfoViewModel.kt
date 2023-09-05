@@ -12,6 +12,7 @@ import androidx.core.net.toFile
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.softspace.bookstorepoc.interfaces.ICustomNavigator
 import com.softspace.bookstorepoc.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import data.Book
@@ -35,7 +36,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class BookInfoViewModel @Inject constructor(
-    private val navigator: CustomNavigator,
+    private val navigator: ICustomNavigator,
     private val bookRepo: BookRepository,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
