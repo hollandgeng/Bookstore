@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -65,6 +66,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.core.app.ComponentActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -296,6 +298,9 @@ fun BookInfoView(
             onValueChange = {
                 onBookInfoChanged(it, BookEditingState.Title)
             },
+            keyboardOptions = KeyboardOptions(
+                imeAction = ImeAction.Next
+            ),
             prefix = { Text("Name: ") },
             modifier = Modifier.fillMaxWidth(0.8F),
             enabled = editable
@@ -306,6 +311,9 @@ fun BookInfoView(
             onValueChange = {
                 onBookInfoChanged(it, BookEditingState.Author)
             },
+            keyboardOptions = KeyboardOptions(
+                imeAction = ImeAction.Next
+            ),
             prefix = { Text("Author: ") },
             modifier = Modifier.fillMaxWidth(0.8F),
             enabled = editable

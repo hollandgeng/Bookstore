@@ -83,7 +83,7 @@ fun BooklistScreen(viewModel: BooklistViewModel = hiltViewModel()) {
                 ),
                 navigationIcon = {
                     TextButton(onClick = {
-                        viewModel.Back()
+                        viewModel.Logout()
                     }) {
                         Text(
                             "Logout",

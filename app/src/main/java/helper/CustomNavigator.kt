@@ -36,9 +36,9 @@ class CustomNavigator @Inject constructor() : ICustomNavigator
         )
     }
 
-    override fun navigate(route: String) {
+    override fun navigate(route: String, popUpToRoute : String?, inclusive: Boolean, isSingleTop : Boolean) {
         navigationChannel.trySend(
-            NavigationIntent.Navigate(route)
+            NavigationIntent.Navigate(route, popUpToRoute, inclusive, isSingleTop)
         )
     }
 

@@ -22,7 +22,7 @@ class LoginViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(loginData())
     val uiState : StateFlow<loginData> = _uiState
 
-    fun Login(context: Context,id:String, password:String) : Boolean
+    fun Login(context: Context,id:String, password:String)
     {
         _uiState.update { current ->
             current.copy(
@@ -33,16 +33,14 @@ class LoginViewModel @Inject constructor(
 
         val result = userRepo.ValidateUser_Mock(id,password)
 
-        if (result)
+        if (result.success)
         {
-            navigator.navigate(Screen.BooklistScreen.fullRoute)
+            navigator.navigate(Screen.BooklistScreen.fullRoute,Screen.LoginScreen.fullRoute, true)
         }
         else
         {
-            Toast.makeText(context,"Invalid UserId or Password",Toast.LENGTH_SHORT).show()
+            Toast.makeText(context,result.error,Toast.LENGTH_SHORT).show()
         }
-
-        return  result
     }
 
 

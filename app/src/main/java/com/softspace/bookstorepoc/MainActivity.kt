@@ -129,6 +129,13 @@ fun RegisterNavigationEffects(
 
                 is  NavigationIntent.Navigate -> {
                     navHostController.navigate(intent.route)
+                    {
+                        launchSingleTop = intent.isSingleTop
+                        intent.popUpToRoute?.let {
+                            popUpToRoute -> popUpTo(popUpToRoute) { inclusive = intent.inclusive }
+                        }
+
+                    }
                 }
 
                 else -> {}

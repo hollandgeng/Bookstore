@@ -11,12 +11,16 @@ interface ICustomNavigator {
     )
 
      fun navigate(
-        route: String
+        route: String,
+        popUpToRoute: String? = null,
+        inclusive: Boolean = false,
+        isSingleTop : Boolean = false
     )
 }
 
 sealed class NavigationIntent
 {
     data class NavigateBack(val route: String? = null, val inclusive :Boolean = false) : NavigationIntent()
-    data class Navigate(val route : String) : NavigationIntent()
+    data class Navigate(val route : String, val popUpToRoute: String? = null,
+                        val inclusive: Boolean = false, val isSingleTop: Boolean = false) : NavigationIntent()
 }

@@ -6,11 +6,8 @@ import com.softspace.bookstorepoc.interfaces.ICustomNavigator
 import com.softspace.bookstorepoc.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import data.Book
-import helper.CustomNavigator
 import helper.Screen
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -50,9 +47,9 @@ class BooklistViewModel @Inject constructor(
     }
 
 
-    fun Back()
+    fun Logout()
     {
-        navigator.navigateBack()
+        navigator.navigate(Screen.LoginScreen.fullRoute,Screen.BooklistScreen.fullRoute,true)
     }
 }
 
